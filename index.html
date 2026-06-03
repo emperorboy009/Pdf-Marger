@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Fusion Kece</title>
+  <title>PDF Marger Tools</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -79,54 +79,4 @@
   <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
   <script src="script.js"></script>
 </body>
-</html>          Pilih PDF
-          <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />
-        </label>
-      </div>
-
-      <div class="output-row">
-        <label for="outputName">Nama file hasil</label>
-        <input id="outputName" type="text" value="HasilGabungan" />
-      </div>
-
-      <div class="summary">
-        <span id="fileCount">0 file</span>
-        <span id="totalSize">Total: 0 KB</span>
-      </div>
-
-      <div class="estimate-box">
-        Estimasi ukuran hasil: <b id="estimatedSize">0 KB</b>
-      </div>
-
-      <div id="fileList" class="file-list"></div>
-
-      <div class="progress-wrap">
-        <div class="progress-info">
-          <span id="progressText">Menunggu file PDF...</span>
-          <span id="progressPercent">0%</span>
-        </div>
-
-        <div class="progress-bar">
-          <div id="progressFill"></div>
-        </div>
-      </div>
-
-      <button id="mergeBtn" class="merge-button" type="button">
-        Gabungkan & Download
-      </button>
-    </section>
-  </main>
-
-  <div id="previewModal" class="modal">
-    <div class="modal-content">
-      <button id="closePreview" class="close-btn">Tutup</button>
-      <h2 id="previewTitle">Preview PDF</h2>
-      <div id="allPagesPreview"></div>
-    </div>
-  </div>
-
-  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-  <script src="script.js"></script>
-</body>
-  </html>
+</html>
