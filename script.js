@@ -6,17 +6,27 @@ const dropZone = document.getElementById("dropZone");
 const fileList = document.getElementById("fileList");
 const mergeBtn = document.getElementById("mergeBtn");
 const outputName = document.getElementById("outputName");
+
 const fileCount = document.getElementById("fileCount");
 const totalSize = document.getElementById("totalSize");
+const estimatedSize = document.getElementById("estimatedSize");
+
 const progressText = document.getElementById("progressText");
 const progressPercent = document.getElementById("progressPercent");
 const progressFill = document.getElementById("progressFill");
+
 const themeToggle = document.getElementById("themeToggle");
+
+const previewModal = document.getElementById("previewModal");
+const closePreview = document.getElementById("closePreview");
+const previewTitle = document.getElementById("previewTitle");
+const allPagesPreview = document.getElementById("allPagesPreview");
 
 let pdfFiles = [];
 
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark");
+
   themeToggle.textContent = document.body.classList.contains("dark")
     ? "☀️ Mode Terang"
     : "🌙 Mode Gelap";
@@ -45,23 +55,36 @@ dropZone.addEventListener("drop", (event) => {
   addFiles(event.dataTransfer.files);
 });
 
+closePreview.addEventListener("click", () => {
+  previewModal.classList.remove("show");
+  allPagesPreview.innerHTML = "";
+});
+
+previewModal.addEventListener("click", (event) => {
+  if (event.target === previewModal) {
+    previewModal.classList.remove("show");
+    allPagesPreview.innerHTML = "";
+  }
+});
+
 function addFiles(files) {
-  const validFiles = Array.from(files).filter((file) =>
-    file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-  );
+  const validFiles = Array.from(files).filter((file) => {
+    return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  });
 
   validFiles.forEach((file) => {
-    const duplicate = pdfFiles.some(
-      (item) =>
+    const duplicate = pdfFiles.some((item) => {
+      return (
         item.file.name === file.name &&
         item.file.size === file.size &&
         item.file.lastModified === file.lastModified
-    );
+      );
+    });
 
     if (!duplicate) {
       pdfFiles.push({
         id: crypto.randomUUID(),
-        file,
+        file: file,
       });
     }
   });
@@ -70,8 +93,14 @@ function addFiles(files) {
 }
 
 function formatSize(bytes) {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024) {
+    return `${bytes} B`;
+  }
+
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
+
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -81,10 +110,16 @@ function setProgress(percent, text) {
   progressText.textContent = text;
 }
 
+function updateEstimatedSize() {
+  const total = pdfFiles.reduce((sum, item) => sum + item.file.size, 0);
+  estimatedSize.textContent = formatSize(total);
+}
+
 function renderFiles() {
   fileList.innerHTML = "";
 
   const total = pdfFiles.reduce((sum, item) => sum + item.file.size, 0);
+
   fileCount.textContent = `${pdfFiles.length} file`;
   totalSize.textContent = `Total: ${formatSize(total)}`;
 
@@ -122,6 +157,10 @@ function renderFiles() {
     downBtn.disabled = index === pdfFiles.length - 1;
     downBtn.onclick = () => moveFile(index, index + 1);
 
+    const previewBtn = document.createElement("button");
+    previewBtn.textContent = "Preview Semua";
+    previewBtn.onclick = () => previewAllPages(item.file);
+
     const deleteBtn = document.createElement("button");
     deleteBtn.textContent = "Hapus";
     deleteBtn.className = "delete";
@@ -130,12 +169,14 @@ function renderFiles() {
       renderFiles();
     };
 
-    actions.append(upBtn, downBtn, deleteBtn);
+    actions.append(upBtn, downBtn, previewBtn, deleteBtn);
     card.append(preview, info, actions);
     fileList.appendChild(card);
 
     renderPreview(item.file, preview);
   });
+
+  updateEstimatedSize();
 }
 
 function moveFile(from, to) {
@@ -159,13 +200,51 @@ async function renderPreview(file, container) {
 
     await page.render({
       canvasContext: context,
-      viewport,
+      viewport: viewport,
     }).promise;
 
     container.textContent = "";
     container.appendChild(canvas);
   } catch (error) {
     container.textContent = "Gagal preview";
+  }
+}
+
+async function previewAllPages(file) {
+  previewModal.classList.add("show");
+  previewTitle.textContent = file.name;
+  allPagesPreview.innerHTML = "Memuat semua halaman...";
+
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+
+    allPagesPreview.innerHTML = "";
+
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+      const page = await pdf.getPage(pageNumber);
+      const viewport = page.getViewport({ scale: 1.1 });
+
+      const canvas = document.createElement("canvas");
+      const context = canvas.getContext("2d");
+
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
+
+      await page.render({
+        canvasContext: context,
+        viewport: viewport,
+      }).promise;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "page-preview";
+      wrapper.innerHTML = `<b>Halaman ${pageNumber}</b>`;
+      wrapper.appendChild(canvas);
+
+      allPagesPreview.appendChild(wrapper);
+    }
+  } catch (error) {
+    allPagesPreview.innerHTML = "Gagal memuat preview.";
   }
 }
 
@@ -185,25 +264,9 @@ mergeBtn.addEventListener("click", async () => {
   setProgress(5, "Mulai menggabungkan PDF...");
 
   try {
-    const mergedPdf = await PDFLib.PDFDocument.create();
+    const finalBytes = await mergeNormal();
 
-    for (let i = 0; i < pdfFiles.length; i++) {
-      const item = pdfFiles[i];
-      const percent = Math.round(((i + 1) / pdfFiles.length) * 85);
-
-      setProgress(percent, `Memproses: ${item.file.name}`);
-
-      const bytes = await item.file.arrayBuffer();
-      const pdf = await PDFLib.PDFDocument.load(bytes);
-      const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-
-      pages.forEach((page) => mergedPdf.addPage(page));
-    }
-
-    setProgress(92, "Membuat file hasil...");
-
-    const mergedBytes = await mergedPdf.save();
-    const blob = new Blob([mergedBytes], {
+    const blob = new Blob([finalBytes], {
       type: "application/pdf",
     });
 
@@ -211,6 +274,7 @@ mergeBtn.addEventListener("click", async () => {
     const name = outputName.value.trim() || "hasil-gabungan";
 
     link.href = URL.createObjectURL(blob);
+
     link.download = name.toLowerCase().endsWith(".pdf")
       ? name
       : `${name}.pdf`;
@@ -226,3 +290,28 @@ mergeBtn.addEventListener("click", async () => {
     mergeBtn.disabled = false;
   }
 });
+
+async function mergeNormal() {
+  const mergedPdf = await PDFLib.PDFDocument.create();
+
+  for (let i = 0; i < pdfFiles.length; i++) {
+    const item = pdfFiles[i];
+    const percent = Math.round(((i + 1) / pdfFiles.length) * 85);
+
+    setProgress(percent, `Menggabungkan: ${item.file.name}`);
+
+    const bytes = await item.file.arrayBuffer();
+    const pdf = await PDFLib.PDFDocument.load(bytes);
+    const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+
+    pages.forEach((page) => mergedPdf.addPage(page));
+  }
+
+  setProgress(92, "Mengoptimalkan file hasil...");
+
+  return await mergedPdf.save({
+    useObjectStreams: true,
+    addDefaultPage: false,
+    objectsPerTick: 50,
+  });
+}
