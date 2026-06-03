@@ -3,28 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>PDF Marger Tools</title>
+  <title>PDF Fusion Kece</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <main class="app">
     <section class="hero">
       <div>
-        <p class="badge">PDF Marger  Tool</p>
-        <h1>Gabungkan PDF dengan tools.</h1>
+        <p class="badge">🔒 100% Diproses di Browser</p>
+        <h1>Gabungkan PDF dengan gaya lebih kece.</h1>
         <p class="subtitle">
-          Gabungkan PDF Dengan aman melalui Tools ini, Karena sistem kami 100% tidak menyimpan filenya,
-        Ini membuat privasi anda lebih Terjaga.
-        </p>
-        <p class="subtitle">
-          Drag & drop file, atur urutan, preview semua halaman,
-          cek ukuran file, lalu download hasilnya.
+          Drag file untuk ubah urutan, pilih halaman tertentu, hapus halaman tertentu,
+          preview PDF, lalu download hasilnya.
         </p>
       </div>
 
-      <button id="themeToggle" class="theme-toggle" type="button">
-        🌙 Mode Gelap
-      </button>
+      <button id="themeToggle" class="theme-toggle" type="button">🌙 Mode Gelap</button>
     </section>
 
     <section class="panel">
@@ -35,6 +29,57 @@
 
         <label class="file-button">
           Pilih PDF
+          <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />
+        </label>
+      </div>
+
+      <div class="output-row">
+        <label for="outputName">Nama file hasil</label>
+        <input id="outputName" type="text" value="hasil-gabungan" />
+      </div>
+
+      <div class="summary">
+        <span id="fileCount">0 file</span>
+        <span id="totalSize">Total: 0 KB</span>
+      </div>
+
+      <div class="estimate-box">
+        Estimasi ukuran hasil: <b id="estimatedSize">0 KB</b>
+      </div>
+
+      <div id="fileList" class="file-list"></div>
+
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span id="progressText">Menunggu file PDF...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+
+        <div class="progress-bar">
+          <div id="progressFill"></div>
+        </div>
+      </div>
+
+      <button id="mergeBtn" class="merge-button" type="button">
+        Gabungkan & Download
+      </button>
+    </section>
+  </main>
+
+  <div id="previewModal" class="modal">
+    <div class="modal-content">
+      <button id="closePreview" class="close-btn">Tutup</button>
+      <h2 id="previewTitle">Preview PDF</h2>
+      <div id="allPagesPreview"></div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>          Pilih PDF
           <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />
         </label>
       </div>
