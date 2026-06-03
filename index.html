@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Merger</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+<h1>Gabungkan PDF</h1>
+
+<input type="file" id="pdfFiles" multiple accept=".pdf">
+
+<label>Nama file hasil:</label>
+<input type="text" id="outputName" value="hasil-gabungan">
+
+<button id="mergeBtn">Gabungkan & Download</button>
+
+<p id="status"></p>
+</div>
+
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
