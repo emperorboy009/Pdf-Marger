@@ -24,6 +24,16 @@ const allPagesPreview = document.getElementById("allPagesPreview");
 
 let pdfFiles = [];
 
+new Sortable(fileList, {
+  animation: 180,
+  handle: ".drag-handle",
+  onEnd: function (event) {
+    const movedItem = pdfFiles.splice(event.oldIndex, 1)[0];
+    pdfFiles.splice(event.newIndex, 0, movedItem);
+    renderFiles();
+  },
+});
+
 themeToggle.addEventListener("click", () => {
   document.body.classList.toggle("dark");
 
@@ -55,24 +65,20 @@ dropZone.addEventListener("drop", (event) => {
   addFiles(event.dataTransfer.files);
 });
 
-closePreview.addEventListener("click", () => {
-  previewModal.classList.remove("show");
-  allPagesPreview.innerHTML = "";
-});
+closePreview.addEventListener("click", closePreviewModal);
 
 previewModal.addEventListener("click", (event) => {
   if (event.target === previewModal) {
-    previewModal.classList.remove("show");
-    allPagesPreview.innerHTML = "";
+    closePreviewModal();
   }
 });
 
-function addFiles(files) {
+async function addFiles(files) {
   const validFiles = Array.from(files).filter((file) => {
     return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
   });
 
-  validFiles.forEach((file) => {
+  for (const file of validFiles) {
     const duplicate = pdfFiles.some((item) => {
       return (
         item.file.name === file.name &&
@@ -82,25 +88,34 @@ function addFiles(files) {
     });
 
     if (!duplicate) {
+      const pageCount = await getPageCount(file);
+
       pdfFiles.push({
         id: crypto.randomUUID(),
         file: file,
+        pageCount: pageCount,
+        includePages: "",
+        removePages: "",
       });
     }
-  });
+  }
 
   renderFiles();
 }
 
+async function getPageCount(file) {
+  try {
+    const buffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buffer }).promise;
+    return pdf.numPages;
+  } catch (error) {
+    return 0;
+  }
+}
+
 function formatSize(bytes) {
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
@@ -126,12 +141,17 @@ function renderFiles() {
   if (pdfFiles.length === 0) {
     setProgress(0, "Menunggu file PDF...");
   } else {
-    setProgress(0, "Siap digabung.");
+    setProgress(0, "Siap digabung. Geser kartu file untuk ubah urutan.");
   }
 
   pdfFiles.forEach((item, index) => {
     const card = document.createElement("div");
     card.className = "file-card";
+    card.dataset.id = item.id;
+
+    const handle = document.createElement("div");
+    handle.className = "drag-handle";
+    handle.textContent = "☰";
 
     const preview = document.createElement("div");
     preview.className = "preview";
@@ -139,50 +159,63 @@ function renderFiles() {
 
     const info = document.createElement("div");
     info.className = "file-info";
+
     info.innerHTML = `
       <h3>${index + 1}. ${escapeHtml(item.file.name)}</h3>
-      <p>Ukuran: ${formatSize(item.file.size)}</p>
+      <p>Ukuran: ${formatSize(item.file.size)} • ${item.pageCount || "-"} halaman</p>
+
+      <div class="page-control">
+        <label>Ambil halaman tertentu</label>
+        <input class="page-input include-input" data-id="${item.id}" type="text"
+          placeholder="Contoh: 1-3,5,8 | kosongkan untuk semua"
+          value="${escapeHtml(item.includePages)}">
+
+        <label>Hapus halaman tertentu</label>
+        <input class="page-input remove-input" data-id="${item.id}" type="text"
+          placeholder="Contoh: 2,4,7-9"
+          value="${escapeHtml(item.removePages)}">
+
+        <span class="page-hint">Format halaman: 1-3,5,8. Nomor halaman dimulai dari 1.</span>
+      </div>
     `;
 
     const actions = document.createElement("div");
     actions.className = "actions";
-
-    const upBtn = document.createElement("button");
-    upBtn.textContent = "Naik";
-    upBtn.disabled = index === 0;
-    upBtn.onclick = () => moveFile(index, index - 1);
-
-    const downBtn = document.createElement("button");
-    downBtn.textContent = "Turun";
-    downBtn.disabled = index === pdfFiles.length - 1;
-    downBtn.onclick = () => moveFile(index, index + 1);
 
     const previewBtn = document.createElement("button");
     previewBtn.textContent = "Preview Semua";
     previewBtn.onclick = () => previewAllPages(item.file);
 
     const deleteBtn = document.createElement("button");
-    deleteBtn.textContent = "Hapus";
+    deleteBtn.textContent = "Hapus File";
     deleteBtn.className = "delete";
     deleteBtn.onclick = () => {
       pdfFiles.splice(index, 1);
       renderFiles();
     };
 
-    actions.append(upBtn, downBtn, previewBtn, deleteBtn);
-    card.append(preview, info, actions);
+    actions.append(previewBtn, deleteBtn);
+    card.append(handle, preview, info, actions);
     fileList.appendChild(card);
 
     renderPreview(item.file, preview);
   });
 
-  updateEstimatedSize();
-}
+  document.querySelectorAll(".include-input").forEach((inputEl) => {
+    inputEl.addEventListener("input", (event) => {
+      const item = pdfFiles.find((file) => file.id === event.target.dataset.id);
+      if (item) item.includePages = event.target.value;
+    });
+  });
 
-function moveFile(from, to) {
-  const [file] = pdfFiles.splice(from, 1);
-  pdfFiles.splice(to, 0, file);
-  renderFiles();
+  document.querySelectorAll(".remove-input").forEach((inputEl) => {
+    inputEl.addEventListener("input", (event) => {
+      const item = pdfFiles.find((file) => file.id === event.target.dataset.id);
+      if (item) item.removePages = event.target.value;
+    });
+  });
+
+  updateEstimatedSize();
 }
 
 async function renderPreview(file, container) {
@@ -248,10 +281,66 @@ async function previewAllPages(file) {
   }
 }
 
-function escapeHtml(text) {
-  const div = document.createElement("div");
-  div.textContent = text;
-  return div.innerHTML;
+function closePreviewModal() {
+  previewModal.classList.remove("show");
+  allPagesPreview.innerHTML = "";
+}
+
+function parsePageRange(text, maxPages) {
+  if (!text || !text.trim()) {
+    return Array.from({ length: maxPages }, (_, index) => index);
+  }
+
+  const result = new Set();
+  const parts = text.split(",");
+
+  for (const part of parts) {
+    const clean = part.trim();
+
+    if (!clean) continue;
+
+    if (clean.includes("-")) {
+      const [startRaw, endRaw] = clean.split("-");
+      const start = Number(startRaw);
+      const end = Number(endRaw);
+
+      if (
+        Number.isInteger(start) &&
+        Number.isInteger(end) &&
+        start >= 1 &&
+        end >= start &&
+        end <= maxPages
+      ) {
+        for (let page = start; page <= end; page++) {
+          result.add(page - 1);
+        }
+      }
+    } else {
+      const page = Number(clean);
+
+      if (Number.isInteger(page) && page >= 1 && page <= maxPages) {
+        result.add(page - 1);
+      }
+    }
+  }
+
+  return Array.from(result).sort((a, b) => a - b);
+}
+
+function getFinalPageIndexes(item) {
+  let selectedPages = parsePageRange(item.includePages, item.pageCount);
+
+  if (!item.removePages.trim()) {
+    return selectedPages;
+  }
+
+  const removedPages = new Set(
+    parsePageRange(item.removePages, item.pageCount)
+  );
+
+  selectedPages = selectedPages.filter((pageIndex) => !removedPages.has(pageIndex));
+
+  return selectedPages;
 }
 
 mergeBtn.addEventListener("click", async () => {
@@ -284,7 +373,7 @@ mergeBtn.addEventListener("click", async () => {
 
     setProgress(100, "Selesai! File berhasil di-download.");
   } catch (error) {
-    alert("Terjadi kesalahan saat menggabungkan PDF.");
+    alert("Terjadi kesalahan saat menggabungkan PDF. Cek format halaman yang kamu masukkan.");
     setProgress(0, "Gagal menggabungkan PDF.");
   } finally {
     mergeBtn.disabled = false;
@@ -302,9 +391,19 @@ async function mergeNormal() {
 
     const bytes = await item.file.arrayBuffer();
     const pdf = await PDFLib.PDFDocument.load(bytes);
-    const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
 
+    const pageIndexes = getFinalPageIndexes(item);
+
+    if (pageIndexes.length === 0) {
+      continue;
+    }
+
+    const pages = await mergedPdf.copyPages(pdf, pageIndexes);
     pages.forEach((page) => mergedPdf.addPage(page));
+  }
+
+  if (mergedPdf.getPageCount() === 0) {
+    throw new Error("Tidak ada halaman yang dipilih.");
   }
 
   setProgress(92, "Mengoptimalkan file hasil...");
@@ -315,3 +414,9 @@ async function mergeNormal() {
     objectsPerTick: 50,
   });
 }
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+    }
