@@ -1,26 +1,64 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Merger</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PDF Fusion Kece</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-<div class="container">
-<h1>Gabungkan PDF</h1>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <p class="badge">PDF Merger Browser-Based</p>
+        <h1>Gabungkan PDF dengan gaya lebih kece.</h1>
+        <p class="subtitle">
+          Drag & drop file, atur urutan, lihat preview, cek ukuran file, lalu download hasilnya.
+        </p>
+      </div>
 
-<input type="file" id="pdfFiles" multiple accept=".pdf">
+      <button id="themeToggle" class="theme-toggle" type="button">🌙 Mode Gelap</button>
+    </section>
 
-<label>Nama file hasil:</label>
-<input type="text" id="outputName" value="hasil-gabungan">
+    <section class="panel">
+      <div id="dropZone" class="drop-zone">
+        <div class="drop-icon">📄</div>
+        <h2>Tarik file PDF ke sini</h2>
+        <p>atau klik tombol di bawah untuk memilih file</p>
+        <label class="file-button">
+          Pilih PDF
+          <input id="pdfInput" type="file" accept="application/pdf,.pdf" multiple />
+        </label>
+      </div>
 
-<button id="mergeBtn">Gabungkan & Download</button>
+      <div class="output-row">
+        <label for="outputName">Nama file hasil</label>
+        <input id="outputName" type="text" value="hasil-gabungan" placeholder="contoh: dokumen-final" />
+      </div>
 
-<p id="status"></p>
-</div>
+      <div class="summary">
+        <span id="fileCount">0 file</span>
+        <span id="totalSize">Total: 0 KB</span>
+      </div>
 
-<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
-<script src="script.js"></script>
+      <div id="fileList" class="file-list"></div>
+
+      <div class="progress-wrap">
+        <div class="progress-info">
+          <span id="progressText">Menunggu file PDF...</span>
+          <span id="progressPercent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div id="progressFill"></div>
+        </div>
+      </div>
+
+      <button id="mergeBtn" class="merge-button" type="button">Gabungkan & Download</button>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
